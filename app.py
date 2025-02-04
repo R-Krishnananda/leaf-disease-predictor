@@ -6,6 +6,12 @@ import requests
 from werkzeug.utils import secure_filename
 from mistralai import Mistral
 from dotenv import load_dotenv
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+import mongoengine as me
+from models.user import User
+from models.chat import Chat
+import json
+from datetime import datetime, timedelta
 
 load_dotenv()
 API_URL = 'http://localhost:5000/chat'
@@ -26,7 +32,48 @@ class_names = get_class_names('class_dataset')
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Replace MongoDB configuration
+me.connect('leaf_disease', host='localhost', port=27017)
+
+app.config['JWT_SECRET_KEY'] = 'your-secret-key'  # Change this to a secure secret key
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+
+jwt = JWTManager(app)
+
+@app.route('/register', methods=['POST'])
+def register():
+    try:
+        data = request.json
+        if User.objects(email=data['email']).first():
+            return jsonify({'error': 'Email already registered'}), 400
+        
+        user = User(email=data['email'])
+        user.set_password(data['password'])
+        user.save()
+        
+        return jsonify({'message': 'User registered successfully'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        data = request.json
+        user = User.objects(email=data['email']).first()
+        
+        if user and user.check_password(data['password']):
+            access_token = create_access_token(identity=str(user.id))
+            return jsonify({
+                'token': access_token,
+                'email': user.email
+            }), 200
+        
+        return jsonify({'error': 'Invalid credentials'}), 401
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/predict', methods=['POST'])
+@jwt_required()  # Add this decorator if you want to require authentication
 def predict():
     if 'image' not in request.files:
         return jsonify({'error': 'No image uploaded'}), 400
@@ -52,22 +99,18 @@ def predict():
 import logging
 
 @app.route('/chat', methods=['POST'])
+@jwt_required()  # Require authentication for chat
 def chat():
     try:
-        # Get request data with validation
+        current_user = User.objects(id=get_jwt_identity()).first()
         data = request.get_json()
+        
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
 
-        # Extract and validate user message
         user_message = data.get('message')
-        if not user_message:
-            return jsonify({"error": "Message is required"}), 400
-
-        # Extract and validate chat history
         chat_history = data.get('history', [])
-        if not isinstance(chat_history, list):
-            return jsonify({"error": "Chat history must be a list"}), 400
+        disease_title = data.get('disease_title', 'Unknown Disease')
 
         # Construct the message with instruction
         formatted_message = (
@@ -104,6 +147,27 @@ def chat():
             if not response_content:
                 raise ValueError("Empty response from model")
 
+            # After getting response_content, store the chat
+            chat_entry = Chat.objects(
+                user_email=current_user.email,
+                disease_title=disease_title
+            ).first()
+
+            if not chat_entry:
+                chat_entry = Chat(
+                    user_email=current_user.email,
+                    disease_title=disease_title,
+                    messages=[]
+                )
+
+            # Add new messages to chat history
+            chat_entry.messages.extend([
+                {"role": "user", "content": user_message},
+                {"role": "assistant", "content": response_content}
+            ])
+            chat_entry.updated_at = datetime.utcnow()
+            chat_entry.save()
+
             # Return the response
             return jsonify({
                 "response": response_content,
@@ -117,6 +181,21 @@ def chat():
     except Exception as e:
         logging.error(f"Server error: {str(e)}")
         return jsonify({"error": "Server error"}), 500
+
+# Add new route to get user's chat history
+@app.route('/chats', methods=['GET'])
+@jwt_required()
+def get_chats():
+    try:
+        current_user = User.objects(id=get_jwt_identity()).first()
+        chats = Chat.objects(user_email=current_user.email).order_by('-updated_at')
+        return jsonify([{
+            'disease_title': chat.disease_title,
+            'messages': chat.messages,
+            'updated_at': chat.updated_at.isoformat()
+        } for chat in chats])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
