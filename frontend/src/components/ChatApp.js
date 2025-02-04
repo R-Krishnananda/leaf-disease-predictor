@@ -1,20 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Box, TextField, Button, Typography, Paper, Stack } from "@mui/material";
+import { HistoryOutlined } from '@mui/icons-material';
 
 function ChatApp() {
   const location = useLocation();
-  const { predicted_class, probability } = location.state || {};
+  const navigate = useNavigate();
+  const { predicted_class, probability, imageUrl } = location.state || {};
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
-  const [predictedClass, setPredictedClass] = useState(predicted_class);
-  const [predictedProbability, setPredictedProbability] = useState(probability);
   const boxRef = useRef(null);
 
   // Handle incoming predicted class on component mount
   useEffect(() => {
-    if (predictedClass) {
-      const dismessage=`What are the details about this crop disease? :- ${predictedClass}`;
+    // Check for authentication
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    if (predicted_class) {
+      const dismessage = `What are the details about this crop disease? :- ${predicted_class}`;
       handleSend(dismessage);
     }
   }, []); // Run once on mount
@@ -22,6 +29,12 @@ function ChatApp() {
   const handleSend = async (messageToSend = message) => {
     // Don't proceed if there's no message
     if (!messageToSend.trim()) {
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
       return;
     }
 
@@ -39,12 +52,22 @@ function ChatApp() {
       // Send the updated message history to the backend
       const response = await fetch("http://localhost:5000/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
         body: JSON.stringify({ 
           message: messageToSend, 
-          history: updatedMessages 
+          history: updatedMessages,
+          disease_title: predicted_class || 'Unknown Disease'
         }),
       });
+
+      if (response.status === 401) {
+        localStorage.removeItem('token');
+        navigate('/login');
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to communicate with the server");
@@ -61,12 +84,6 @@ function ChatApp() {
       const assistantMessage = { role: "assistant", content: data.response };
       const newHistory = [...updatedMessages, assistantMessage];
       setMessages(newHistory);
-
-      // Reset predicted class and probability after processing
-      if (predictedClass) {
-        setPredictedClass(null);
-        setPredictedProbability(null);
-      }
     } catch (error) {
       console.error("Error:", error.message);
       // Update the last message to show the error
@@ -95,56 +112,63 @@ function ChatApp() {
   }, [messages]);
 
   return (
-    <Box
-      sx={{
-        backgroundColor: "#74CF8C",
-        minHeight: "90vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        p: 3,
-      }}
-    >
-      <Paper
-        elevation={3}
-        sx={{
-          backgroundColor: "#D8F3DF",
-          width: "100%",
-          maxWidth: "920px",
-          p: 3,
-          borderRadius: 2,
-          minHeight: "420px"
-        }}
-      >
-        <Typography variant="h5" gutterBottom>
+    <Box className="page-container">
+      <Paper elevation={3} className="content-paper">
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h5" gutterBottom>
+            Leaf Disease Analysis
+          </Typography>
+          <Button
+            variant="outlined"
+            startIcon={<HistoryOutlined />}
+            onClick={() => navigate('/history')}
+          >
+            View History
+          </Button>
+        </Box>
+
+        {/* Disease Info Section - Always visible if data exists */}
+        {predicted_class && imageUrl && (
+          <Box className="disease-info">
+            <img
+              src={imageUrl}
+              alt="Uploaded leaf"
+              className="uploaded-image"
+            />
+            <Typography variant="h6" align="center" gutterBottom>
+              Predicted Disease: {predicted_class}
+            </Typography>
+            <Typography variant="body1" align="center" gutterBottom>
+              Confidence: {(probability * 100).toFixed(2)}%
+            </Typography>
+          </Box>
+        )}
+
+        <Typography variant="h6" gutterBottom>
           Chat with Mistral
         </Typography>
 
+        {/* Chat Section */}
         <Box
           ref={boxRef}
-          sx={{
-            backgroundColor: "white",
-            maxHeight: "350px",
-            overflowY: "auto",
-            p: 1,
-            mb: 2,
-            border: "1px solid #ddd",
-            borderRadius: 2,
-            scrollBehavior: "smooth",
-          }}
+          className="chat-container"
         >
           {messages.map((msg, index) => (
-            <Typography
+            <Box
               key={index}
-              align={msg.role === "user" ? "right" : "left"}
-              sx={{
-                color: msg.role === "user" ? "blue" : "black",
-                mb: 1,
-                wordWrap: "break-word",
-              }}
+              className={`message-box ${msg.role === "user" ? "user-message" : "assistant-message"}`}
             >
-              {msg.content}
-            </Typography>
+              <Typography
+                align={msg.role === "user" ? "right" : "left"}
+                sx={{
+                  color: msg.role === "user" ? "blue" : "black",
+                  mb: 1,
+                  wordWrap: "break-word",
+                }}
+              >
+                {msg.content}
+              </Typography>
+            </Box>
           ))}
         </Box>
 

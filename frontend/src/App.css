@@ -21,3 +21,173 @@ button {
   border-radius: 5px;
   background-color: #f9f9f9;
 }
+
+.file-input {
+  display: block;
+  margin: 0 auto 16px;
+  padding: 10px;
+  border: 2px dashed #ccc;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+  cursor: pointer;
+  text-align: center;
+}
+
+.file-input:hover {
+  border-color: #aaa;
+}
+
+.upload-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.upload-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Common layout styles */
+.page-container {
+  background-color: #74CF8C;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.content-paper {
+  background-color: #74CF8C;
+  width: 100%;
+  padding: 1.5rem;
+  border-radius: 8px;
+}
+
+/* Header styles */
+.app-header {
+  background-color: #4caf50 !important;
+}
+
+/* Message styles */
+.message-box {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 4px;
+}
+
+.user-message {
+  background-color: #e3f2fd;
+  text-align: right;
+}
+
+.assistant-message {
+  background-color: #f5f5f5;
+  text-align: left;
+}
+
+/* Button styles */
+.action-button {
+  margin: 8px !important;
+}
+
+/* Chat container */
+.chat-container {
+  background-color: white;
+  height: 300px;
+  overflow-y: auto;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  scroll-behavior: smooth;
+}
+
+/* Disease info box */
+.disease-info {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Image preview */
+.uploaded-image {
+  max-width: 300px;
+  max-height: 200px;
+  display: block;
+  margin: 0 auto 16px;
+  border-radius: 8px;
+}
+
+/* Accordion styles */
+.history-accordion {
+  margin-bottom: 1rem !important;
+  background-color: white !important;
+}
+
+/* Loading spinner container */
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+/* Auth container styles */
+.auth-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+/* Header button styles */
+.header-button {
+  margin-right: 16px !important;
+}
+
+/* Title styles */
+.page-title {
+  margin-bottom: 24px !important;
+  text-align: center;
+}
+
+/* Form container */
+.form-container {
+  padding: 24px;
+}
+
+/* No history container */
+.no-history-container {
+  text-align: center;
+  padding: 24px;
+}
+
+/* History item styles */
+.history-item {
+  margin-bottom: 16px;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Message content */
+.message-content {
+  padding: 8px;
+  border-radius: 4px;
+  margin: 4px 0;
+}
+
+/* Full width and height styles */
+.full-width-height {
+  width: 100%;
+  height: 100%;
+}

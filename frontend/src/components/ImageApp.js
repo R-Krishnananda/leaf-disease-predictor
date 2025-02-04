@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,12 +14,25 @@ function ImageApp() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+    }
+  }, []);
+
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
   };
 
   const handleUpload = async () => {
     if (!selectedFile) return alert("Please select an image first.");
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
 
     const formData = new FormData();
     formData.append("image", selectedFile);
@@ -29,6 +42,9 @@ function ImageApp() {
     try {
       const response = await fetch("http://127.0.0.1:5000/predict", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -36,8 +52,13 @@ function ImageApp() {
 
       const data = await response.json();
 
-      // Redirect to the /chat page with the result as state
-      navigate("/chat", { state: data });
+      // Add the selectedFile to the navigation state
+      navigate("/chat", { 
+        state: {
+          ...data,
+          imageUrl: URL.createObjectURL(selectedFile)
+        } 
+      });
     } catch (error) {
       console.error("Error:", error);
       alert("Failed to predict the image.");
@@ -77,6 +98,7 @@ function ImageApp() {
             type="file"
             accept="image/*"
             onChange={handleFileChange}
+            className="file-input"
             style={{ marginBottom: "16px" }}
           />
         </Box>
@@ -86,6 +108,7 @@ function ImageApp() {
           color="primary"
           onClick={handleUpload}
           disabled={loading}
+          className="upload-button"
           sx={{ width: "100%" }}
         >
           {loading ? <CircularProgress size={24} color="inherit" /> : "Upload and Predict"}
