@@ -5,21 +5,16 @@ import {
   Paper,
   Typography,
   Button,
-  AppBar,
-  Toolbar,
   Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   CircularProgress,
+  Collapse
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
-import LogoutIcon from '@mui/icons-material/Logout';
+import { HistoryOutlined, Logout, ExpandMore } from '@mui/icons-material';
 
 function ChatHistory() {
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openPanels, setOpenPanels] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -29,7 +24,7 @@ function ChatHistory() {
       return;
     }
     fetchChats();
-  }, []);
+  }, [navigate]);
 
   const fetchChats = async () => {
     try {
@@ -64,86 +59,83 @@ function ChatHistory() {
     return new Date(dateString).toLocaleString();
   };
 
-  return (
-    <Box className="page-container full-width-height" bgcolor={"#74CF8C"}>
-      <AppBar position="static" className="app-header">
-        <Toolbar color={"#74CF8C"}>   
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }} bgcolor={"#74CF8C"}>
-            Disease Analysis History
-          </Typography>
-          <Button
-            color="inherit"
-            startIcon={<CloudUploadIcon />}
-            onClick={() => navigate('/predict')}
-            className="header-button"
-          >
-            New Analysis
-          </Button>
-          <Button
-            color="inherit"
-            startIcon={<LogoutIcon />}
-            onClick={handleLogout}
-          >
-            Logout
-          </Button>
-        </Toolbar>
-      </AppBar>
+  const togglePanel = (index) => {
+    setOpenPanels(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
 
-      <Box className="content-paper full-width-height">
-        <Paper elevation={3}>
+  return (
+    <Box 
+      sx={{ 
+        minHeight: '100vh',
+        backgroundColor: '#74CF8C',
+        width: '100vw',
+        padding: '2rem',
+        boxSizing: 'border-box'
+      }}
+    >
+      <Paper 
+        elevation={3} 
+        sx={{
+          backgroundColor: '#b7e9c4',
+          minHeight: '100vh',
+          width: '90vw',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '2rem',
+          borderRadius: '12px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h5">Disease Analysis History</Typography>
+          <Box>
+            <Button variant="outlined" startIcon={<HistoryOutlined />} onClick={() => navigate('/predict')} sx={{ mr: 1 }}>New Analysis</Button>
+            <Button variant="outlined" startIcon={<Logout />} onClick={handleLogout}>Logout</Button>
+          </Box>
+        </Box>
+
+        <Box>
           {loading ? (
-            <Box className="loading-container">
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
               <CircularProgress />
             </Box>
           ) : chats.length === 0 ? (
-            <Box className="no-history-container">
-              <Typography variant="h6" gutterBottom>
-                No chat history found
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<CloudUploadIcon />}
-                onClick={() => navigate('/predict')}
-                className="action-button"
-              >
-                Start New Analysis
-              </Button>
+            <Box sx={{ textAlign: 'center', mt: 4 }}>
+              <Typography variant="h6">No chat history found</Typography>
+              <Button variant="contained" onClick={() => navigate('/predict')} sx={{ mt: 2 }}>Start New Analysis</Button>
             </Box>
           ) : (
             chats.map((chat, index) => (
-              <Accordion key={index} className="history-accordion">
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Box className="history-header">
-                    <Typography variant="h6">
-                      Disease: {chat.disease_title}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      Last Updated: {formatDate(chat.updated_at)}
-                    </Typography>
+              <Paper key={index} sx={{ mb: 2, p: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }} onClick={() => togglePanel(index)}>
+                  <Typography variant="h6">{chat.disease_title || 'Unknown Disease'}</Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="body2" color="textSecondary">{formatDate(chat.updated_at)}</Typography>
+                    <ExpandMore sx={{ transform: openPanels[index] ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease-in-out' }} />
                   </Box>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Divider className="action-button" />
-                  {chat.messages.map((message, msgIndex) => (
-                    <Box
-                      key={msgIndex}
-                      className={`message-box ${message.role === 'user' ? 'user-message' : 'assistant-message'}`}
-                    >
-                      <Typography
-                        variant="body2"
-                        className={`message-content ${message.role === 'user' ? 'user-message' : 'assistant-message'}`}
-                      >
-                        {message.role === 'user' ? 'You' : 'Assistant'}: {message.content}
-                      </Typography>
-                    </Box>
-                  ))}
-                </AccordionDetails>
-              </Accordion>
+                </Box>
+                <Divider sx={{ my: 1 }} />
+                <Collapse in={openPanels[index]} timeout="auto" unmountOnExit>
+                  <Box sx={{ p: 2 }}>
+                    {chat.messages.map((message, msgIndex) => (
+                      <Box key={msgIndex} sx={{ my: 1 }}>
+                        <Typography variant="body1">
+                          <strong>{message.role === 'user' ? 'You: ' : 'Assistant: '}</strong>
+                          {message.content}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                </Collapse>
+              </Paper>
             ))
           )}
-        </Paper>
-      </Box>
+        </Box>
+      </Paper>
     </Box>
   );
 }

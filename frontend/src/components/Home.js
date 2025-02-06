@@ -51,14 +51,6 @@ function Home() {
           >
             Sign Up
           </Button>
-          <Button 
-            variant="contained" 
-            color="secondary"
-            size="large"
-            onClick={() => navigate('/predict')}
-          >
-            Try Demo
-          </Button>
         </Stack>
       </Paper>
     </Box>

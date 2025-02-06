@@ -11,9 +11,7 @@ function ChatApp() {
   const [messages, setMessages] = useState([]);
   const boxRef = useRef(null);
 
-  // Handle incoming predicted class on component mount
   useEffect(() => {
-    // Check for authentication
     const token = localStorage.getItem('token');
     if (!token) {
       navigate('/login');
@@ -24,13 +22,10 @@ function ChatApp() {
       const dismessage = `What are the details about this crop disease? :- ${predicted_class}`;
       handleSend(dismessage);
     }
-  }, []); // Run once on mount
+  }, []);
 
   const handleSend = async (messageToSend = message) => {
-    // Don't proceed if there's no message
-    if (!messageToSend.trim()) {
-      return;
-    }
+    if (!messageToSend.trim()) return;
 
     const token = localStorage.getItem('token');
     if (!token) {
@@ -38,18 +33,15 @@ function ChatApp() {
       return;
     }
 
-    // Append the user's message to the chat window
     const userMessage = { role: "user", content: messageToSend };
     const updatedMessages = [...messages, userMessage];
     setMessages([...updatedMessages, { role: "assistant", content: "...processing..." }]);
 
-    // Reset the input field if it's a manual message
     if (messageToSend === message) {
       setMessage("");
     }
 
     try {
-      // Send the updated message history to the backend
       const response = await fetch("http://localhost:5000/chat", {
         method: "POST",
         headers: { 
@@ -69,24 +61,15 @@ function ChatApp() {
         return;
       }
 
-      if (!response.ok) {
-        throw new Error("Failed to communicate with the server");
-      }
+      if (!response.ok) throw new Error("Failed to communicate with the server");
 
       const data = await response.json();
+      if (data.error) return;
 
-      if (data.error) {
-        console.error(data.error);
-        return;
-      }
-
-      // Append the assistant's response to the chat
       const assistantMessage = { role: "assistant", content: data.response };
-      const newHistory = [...updatedMessages, assistantMessage];
-      setMessages(newHistory);
+      setMessages([...updatedMessages, assistantMessage]);
     } catch (error) {
       console.error("Error:", error.message);
-      // Update the last message to show the error
       setMessages(prevMessages => {
         const newMessages = [...prevMessages];
         newMessages[newMessages.length - 1] = {
@@ -105,17 +88,39 @@ function ChatApp() {
   };
 
   useEffect(() => {
-    // Automatically scroll to the bottom whenever content changes
     if (boxRef.current) {
       boxRef.current.scrollTop = boxRef.current.scrollHeight;
     }
   }, [messages]);
 
   return (
-    <Box className="page-container">
-      <Paper elevation={3} className="content-paper">
+    <Box 
+      className="page-container"
+      sx={{ 
+        minHeight: '100vh', 
+        backgroundColor: '#74CF8C', 
+        width: '100vw', 
+        padding: '2rem', 
+        boxSizing: 'border-box' 
+      }}
+    >
+      <Paper 
+        elevation={3} 
+        sx={{
+          backgroundColor: '#b7e9c4',
+          minHeight: '100vh',
+          width: '90vw',
+          maxWidth: '1200px',
+          margin: '0 auto',
+          padding: '2rem',
+          borderRadius: '12px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Header */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h5" gutterBottom>
+          <Typography variant="h5">
             Leaf Disease Analysis
           </Typography>
           <Button
@@ -127,47 +132,73 @@ function ChatApp() {
           </Button>
         </Box>
 
-        {/* Disease Info Section - Always visible if data exists */}
+        {/* Disease Info Section */}
         {predicted_class && imageUrl && (
-          <Box className="disease-info">
+          <Box 
+            sx={{
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              mb: 2, 
+              bgcolor: '#dff7e1', 
+              padding: '1rem', 
+              borderRadius: '12px'
+            }}
+          >
             <img
               src={imageUrl}
               alt="Uploaded leaf"
-              className="uploaded-image"
+              style={{ width: '200px', height: '200px', objectFit: 'cover', borderRadius: '8px' }}
             />
-            <Typography variant="h6" align="center" gutterBottom>
+            <Typography variant="h6">
               Predicted Disease: {predicted_class}
             </Typography>
-            <Typography variant="body1" align="center" gutterBottom>
+            <Typography variant="body1">
               Confidence: {(probability * 100).toFixed(2)}%
             </Typography>
           </Box>
         )}
 
-        <Typography variant="h6" gutterBottom>
+        {/* Chat Section */}
+        <Typography variant="h6">
           Chat with Mistral
         </Typography>
 
-        {/* Chat Section */}
         <Box
           ref={boxRef}
-          className="chat-container"
+          sx={{
+            overflowY: 'auto', 
+            maxHeight: '60vh',
+            bgcolor: '#ffffff',
+            padding: '1rem',
+            borderRadius: '8px',
+            mb: 2,
+            boxShadow: 1
+          }}
         >
           {messages.map((msg, index) => (
             <Box
               key={index}
-              className={`message-box ${msg.role === "user" ? "user-message" : "assistant-message"}`}
+              sx={{
+                display: 'flex',
+                justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                mb: 1
+              }}
             >
-              <Typography
-                align={msg.role === "user" ? "right" : "left"}
+              <Box
                 sx={{
-                  color: msg.role === "user" ? "blue" : "black",
-                  mb: 1,
-                  wordWrap: "break-word",
+                  padding: '10px',
+                  borderRadius: '8px',
+                  maxWidth: '75%',
+                  wordWrap: 'break-word',
+                  bgcolor: msg.role === "user" ? "#D3E3FC" : "#E8F5E9",
+                  boxShadow: 1
                 }}
               >
-                {msg.content}
-              </Typography>
+                <Typography variant="body1">
+                  {msg.content}
+                </Typography>
+              </Box>
             </Box>
           ))}
         </Box>
